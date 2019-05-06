@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Quartz.Spi;
 using TestQuartz.Helper.Quartz;
 
 namespace TestQuartz
@@ -46,7 +47,11 @@ namespace TestQuartz
             _services = services;
             
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
-            services.AddTransient<JobClass>(); 
+            
+            services.AddTransient<JobClass>();
+            services.AddTransient<IJobFactory, JobFactory>(
+                (provider) => new JobFactory( provider ));
+            //services.AddTransient<JobClass>(); 
         }
 
         public IContainer ApplicationContainer { get; private set; }
@@ -55,9 +60,9 @@ namespace TestQuartz
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, IApplicationLifetime applicationLifetime)
         {
-            var quartz = new QuartzStartup(_services.BuildServiceProvider());
-            applicationLifetime.ApplicationStarted.Register(() => quartz.Start().Wait());
-            applicationLifetime.ApplicationStopped.Register(quartz.Stop);
+//            var quartz = new QuartzStartup(_services.BuildServiceProvider());
+//            applicationLifetime.ApplicationStarted.Register(() => quartz.Start().Wait());
+//            applicationLifetime.ApplicationStopped.Register(quartz.Stop);
             
             //https://stackoverflow.com/questions/28258227/how-to-set-environment-name-ihostingenvironment-environmentname
             _logger.LogInformation($"In {env.EnvironmentName} environment");
@@ -74,6 +79,7 @@ namespace TestQuartz
 
             app.UseHttpsRedirection();
             app.UseMvc();
+            app.UseQuartz((quartz) => {quartz.AddJob<JobClass>("job","group1","0/10 * * * * ?");});
             
             
         }
